@@ -31,6 +31,21 @@ jobs:
           name: nuget-package
           path: artifacts
 
+      - name: Validate CodeArtifact endpoint
+        id: repository
+        env:
+          NUGET_URL: ${{ inputs.codeartifact-nuget-url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$NUGET_URL" =~ ^https://[^/]+/nuget/([a-z0-9][a-z0-9-]*)/v3/index\.json$ ]]; then
+            echo "::error::Invalid CodeArtifact NuGet endpoint."
+            exit 1
+          fi
+
+          echo "name=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+
       - name: Configure AWS credentials through OIDC
         uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
@@ -38,26 +53,23 @@ jobs:
           aws-region: us-east-1
           allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
 
-      - name: Get CodeArtifact authorization token
-        id: codeartifact
+      - name: Configure CodeArtifact NuGet source
+        env:
+          REPOSITORY: ${{ steps.repository.outputs.name }}
         shell: bash
         run: |
           set -euo pipefail
 
-          token=$(aws codeartifact get-authorization-token \
+          aws codeartifact login \
+            --tool dotnet \
             --domain "${{ vars.CODEARTIFACT_DOMAIN }}" \
             --domain-owner "${{ vars.AWS_ACCOUNT_ID }}" \
-            --region us-east-1 \
-            --query authorizationToken \
-            --output text)
-
-          echo "::add-mask::$token"
-          echo "token=$token" >> "$GITHUB_OUTPUT"
+            --repository "$REPOSITORY" \
+            --region us-east-1
 
       - name: Publish package
         env:
           NUGET_URL: ${{ inputs.codeartifact-nuget-url }}
-          CODEARTIFACT_TOKEN: ${{ steps.codeartifact.outputs.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -70,8 +82,6 @@ jobs:
             exit 1
           fi
 
-          for package in "${packages[@]}"; do
-            dotnet nuget push "$package" \
-              --source "$NUGET_URL" \
-              --api-key "$CODEARTIFACT_TOKEN"
-          done
+          dotnet nuget push "${packages[@]}" \
+            --source "$NUGET_URL" \
+            --skip-duplicate
