@@ -70,4 +70,8 @@ jobs:
             exit 1
           fi
 
-          dot
+          for package in "${packages[@]}"; do
+            dotnet nuget push "$package" \
+              --source "$NUGET_URL" \
+              --api-key "$CODEARTIFACT_TOKEN"
+          done
