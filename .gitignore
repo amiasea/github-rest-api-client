@@ -11,7 +11,7 @@
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
-[Rr]eleases/
+/[Rr]eleases/
 x64/
 x86/
 [Ww][Ii][Nn]32/
@@ -21,12 +21,12 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
-[Ll]ogs/
+/[Ll]ogs/
 
 # .NET Core
 project.lock.json
 project.fragment.lock.json
-artifacts/
+/artifacts/
 
 # ASP.NET Scaffolding
 ScaffoldingReadMe.txt
