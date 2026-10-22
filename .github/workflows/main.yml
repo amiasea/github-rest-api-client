@@ -1,0 +1,84 @@
+name: Amiasea GitHub REST API Client CI/CD
+
+on:
+  push:
+    branches:
+      - development
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: amiasea-github-rest-api-client-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-tag:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.validate.outputs.version }}
+
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate SemVer tag and main ancestry
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="$GITHUB_REF_NAME"
+          SEMVER='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+
+          if [[ ! "$TAG" =~ $SEMVER ]]; then
+            echo "::error::Tag '$TAG' is not a valid v-prefixed SemVer tag."
+            exit 1
+          fi
+
+          git fetch origin main
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag '$TAG' does not point to a commit reachable from main."
+            exit 1
+          fi
+
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+  build-development:
+    if: github.ref == 'refs/heads/development'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/build.yml
+    with:
+      package-version: ${{ format('0.0.0-development.{0}', github.run_number) }}
+
+  build-release:
+    if: startsWith(github.ref, 'refs/tags/') && needs.validate-tag.result == 'success'
+    needs: validate-tag
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/build.yml
+    with:
+      package-version: ${{ needs.validate-tag.outputs.version }}
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/') && needs.validate-tag.result == 'success'
+    needs:
+      - validate-tag
+      - build-release
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      codeartifact-nuget-url: ${{ vars.CODEARTIFACT_ENTERPRISE_NUGET_URL }}

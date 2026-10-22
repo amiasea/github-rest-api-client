@@ -1,0 +1,74 @@
+name: Build Amiasea GitHub REST API Client
+
+on:
+  workflow_call:
+    inputs:
+      package-version:
+        description: NuGet package version to build
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.ARTIFACT_RESTORE_ROLE_ARN }}
+          aws-region: us-east-1
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+
+      - name: Configure CodeArtifact NuGet source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws codeartifact login \
+            --tool dotnet \
+            --domain "${{ vars.CODEARTIFACT_DOMAIN }}" \
+            --domain-owner "${{ vars.AWS_ACCOUNT_ID }}" \
+            --repository "amiasea-enterprise" \
+            --region us-east-1
+
+      - name: Restore
+        run: dotnet restore Amiasea.GitHub.slnx -p:Configuration=Release
+
+      - name: Build
+        run: dotnet build Amiasea.GitHub.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test test/Amiasea.GitHub.Tests/Amiasea.GitHub.Tests.csproj --configuration Release --no-build --no-restore
+
+      - name: Pack Amiasea.GitHub
+        run: |
+          set -euo pipefail
+
+          dotnet pack \
+            src/Amiasea.GitHub/Amiasea.GitHub.csproj \
+            --configuration Release \
+            --no-build \
+            --no-restore \
+            --output artifacts \
+            -p:PackageVersion="${{ inputs.package-version }}"
+
+      - name: Upload NuGet package
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: nuget-package
+          path: artifacts/*.nupkg
+          if-no-files-found: error
+          retention-days: 14

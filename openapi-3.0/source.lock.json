@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "github/rest-api-description",
+  "sourceRef": "1776fe210c46f3e7be72e78fa50f27fecdae1f3a",
+  "sourcePath": "descriptions/api.github.com/api.github.com.yaml",
+  "sourceUrl": "https://raw.githubusercontent.com/github/rest-api-description/1776fe210c46f3e7be72e78fa50f27fecdae1f3a/descriptions/api.github.com/api.github.com.yaml",
+  "commitUrl": "https://github.com/github/rest-api-description/commit/1776fe210c46f3e7be72e78fa50f27fecdae1f3a",
+  "commitDate": "2026-10-17T23:39:31Z",
+  "openApiVersion": "3.0.3",
+  "title": "GitHub v3 REST API",
+  "apiDescriptionVersion": "1.1.4",
+  "sha256": "02ca11343ac20f1afc15f67dcfdb649d8771109bee8fdf66c7dc8fa26e9e7c43"
+}

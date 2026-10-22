@@ -1,0 +1,10 @@
+<Solution>
+	<Folder Name="/github/">
+		<Project Path="src/Amiasea.GitHub/Amiasea.GitHub.csproj" />
+	</Folder>
+	<Folder Name="/src/" />
+	<Folder Name="/test/">
+    <Project Path="test/Amiasea.GitHub.Tests/Amiasea.GitHub.Tests.csproj" />
+		<Project Path="test/Amiasea.GitHub.IntegrationTests/Amiasea.GitHub.IntegrationTests.csproj" />
+	</Folder>
+</Solution>
